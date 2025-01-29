@@ -17,11 +17,11 @@ void createPortList (int *low, int *high, char ***result) {
 	}
 	for (int i = 0; i <= *high - *low; i++) {
       		(*result)[i] = (char*) malloc(sizeof(char) * 6);
-		if (*(result)[i] == NULL) {
+		if ((*result)[i] == NULL) {
 			perror ("malloc");
 			exit (EXIT_FAILURE);
 		}
-		sprintf((*result)[i], "%d", *low + 1);
+		sprintf((*result)[i], "%d", *low + i);
 	}
 }
 
@@ -33,8 +33,8 @@ void scan (int argc, char *argv[]) {
 		exit (EXIT_FAILURE);
 	}
 
-	struct protoent *protocol = getprotobyname("IP");
-	if (protocol < 0) { 
+	struct protoent *protocol = getprotobyname("tcp");
+	if (protocol == NULL) { 
 		perror ("getprotobyname");
 		exit (EXIT_FAILURE);
 	}
@@ -60,7 +60,7 @@ void scan (int argc, char *argv[]) {
 
 	for (int i = 0; i <= port2i - port1i; i++) {
       		int s = getaddrinfo(host, array[i], &hints, &result);
-      		if (s < 0) {
+      		if (s != 0) {
       			perror ("getaddrinfo");
 			free (array[i]);
       			continue;
@@ -73,12 +73,15 @@ void scan (int argc, char *argv[]) {
 			free (array[i]);
 			continue;
       		}
+		struct timeval timeout;
+		timeout.tv_sec = 1; // 1 second timeout
+		timeout.tv_usec = 0;
+		setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timeout, sizeof(timeout));
 
       		if (connect (sockfd, result->ai_addr, result->ai_addrlen) < 0) {
-      			perror ("connect");
 			close(sockfd);
       		} else {
-			printf("Port %s is open", port1i + i);
+			printf("Port %d is open\n", port1i + i);
 			close(sockfd);
 		}
 		freeaddrinfo(result);
